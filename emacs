@@ -7,15 +7,17 @@
 
 (setq inhibit-startup-screen t)
 
-(add-to-list 'load-path "/Users/joekarma/.emacs.d/color-theme-6.6.0")
-
-(require 'color-theme)
-(eval-after-load "color-theme"
-  '(progn
-     (color-theme-initialize)))
+; The colour theme package isn't needed. I'll keep this in
+; the comments for a few commits anyhow though.
+;
+; (add-to-list 'load-path "/Users/joekarma/.emacs.d/color-theme-6.6.0")
+;
+; (require 'color-theme)
+; (eval-after-load "color-theme"
+; '(progn
+;   (color-theme-initialize)))
 
 (load "tomorrow-night-theme.el")
-     
 
 ;; ...and more readable
 (set-face-attribute 'default nil :height 140)
@@ -44,11 +46,14 @@
 
 
 
+
 ;; Make emacs easier to use
 ;; ------------------------
 
 (global-set-key "\C-c\C-a" 'mark-whole-buffer)
-
+(add-to-list 'load-path "~/.emacs.d/helm")
+(require 'helm-config)
+(global-set-key (kbd "C-c h") 'helm-mini)
 
 
 
@@ -212,3 +217,23 @@
   (message "My JS2 hook"))
 
 (add-hook 'js2-mode-hook 'my-js2-mode-hook)
+
+
+
+
+
+;; Some Mac GUI Stuff
+;; ------------------
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(tool-bar-mode nil))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
