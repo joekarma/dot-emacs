@@ -13,6 +13,7 @@
 (eval-after-load "color-theme"
   '(progn
      (color-theme-initialize)))
+
 (load "tomorrow-night-theme.el")
      
 
@@ -46,9 +47,6 @@
 ;; Make emacs easier to use
 ;; ------------------------
 
-(require 'auto-install)
-(require 'anything-match-plugin)
-(require 'anything-config)
 (global-set-key "\C-c\C-a" 'mark-whole-buffer)
 
 
