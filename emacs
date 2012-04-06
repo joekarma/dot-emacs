@@ -53,7 +53,7 @@
 (global-set-key "\C-c\C-a" 'mark-whole-buffer)
 (add-to-list 'load-path "~/.emacs.d/helm")
 (require 'helm-config)
-(global-set-key (kbd "C-c h") 'helm-mini)
+(global-set-key (kbd "C-c C-SPC") 'helm-mini)
 
 
 
@@ -124,6 +124,99 @@
 (setq inferior-lisp-program "/opt/local/bin/ccl64")
 
 (global-set-key (kbd "C-c g") 'slime-selector)
+(set (make-local-variable lisp-indent-function)
+     'common-lisp-indent-function)
+
+;;; get emacs to understand what a reader macro looks like
+;;; http://lists.common-lisp.net/pipermail/slime-devel/2010-August/017686.html
+;;; --------------------------------------------------------------------------
+
+(defun aak:add-lisp-reader-macros-syntactic-keyword ()
+  "Register # numarg macro-character as a font lock syntactic
+keyword, turning it into expression prefix."
+  (set (make-local-variable 'parse-sexp-lookup-properties) t)
+  (set (make-local-variable 'font-lock-syntactic-keywords)
+       '(("\\(\\W\\|$\\)\\#\\([0-9]*[A-Za-z?]\\)" (2 "'")))))
+
+(add-hook 'lisp-mode-hook 'aak:add-lisp-reader-macros-syntactic-keyword)
+
+(defadvice add-text-properties
+  (before aak:slime-propertize-with-font-lock-face activate)
+  (when (eq 'slime-repl-mode major-mode)
+    (let* ((props (ad-get-arg 2))
+	   (face (getf props 'face)))
+      (when face
+	(push face props)
+	(push 'font-lock-face props)
+	(when (memq 'face (getf props 'rear-nonsticky))
+	  (push 'font-lock-face (getf props 'rear-nonsticky)))
+	(ad-set-arg 2 props)))))
+
+(defun aak:enable-font-lock-for-slime-repl ()
+  "Enable font lock mode in slime REPL buffer."
+  (font-lock-fontify-buffer) ;; don't know why it's needed..
+  (font-lock-mode 1))
+
+(add-hook 'slime-repl-mode-hook
+          'aak:add-lisp-reader-macros-syntactic-keyword)
+(add-hook 'slime-repl-mode-hook
+	  'aak:enable-font-lock-for-slime-repl)
+
+;;; stop paredit from inserting an extra space after #p, #+, etc.
+;;; http://paste.lisp.org/display/111419
+;;; -------------------------------------------------------------
+
+(defvar paredit-space-for-delimiter-predicates nil)
+
+(defun paredit-space-for-delimiter-p (endp delimiter)
+  ;; If at the buffer limit, don't insert a space.  If there is a word,
+  ;; symbol, other quote, or non-matching parenthesis delimiter (i.e. a
+  ;; close when want an open the string or an open when we want to
+  ;; close the string), do insert a space.
+  (and (not (if endp (eobp) (bobp)))
+       (memq (char-syntax (if endp (char-after) (char-before)))
+             (list ?w ?_ ?\"
+                   (let ((matching (matching-paren delimiter)))
+                     (and matching (char-syntax matching)))
+                   (and (not endp)
+                        (eq ?\" (char-syntax delimiter))
+                        ?\) )))
+       (catch 'exit
+         (dolist (predicate paredit-space-for-delimiter-predicates)
+           (if (not (funcall predicate endp delimiter))
+               (throw 'exit nil)))
+         t)))
+
+(defvar common-lisp-octothorpe-quotation-characters '(?P))
+(defvar common-lisp-octothorpe-parameter-parenthesis-characters '(?A))
+(defvar common-lisp-octothorpe-parenthesis-characters '(?+ ?- ?C))
+
+(defun paredit-space-for-delimiter-predicate-common-lisp (endp delimiter)
+  (or endp
+      (let ((case-fold-search t)
+            (look
+             (lambda (prefix characters n)
+               (looking-back
+                (concat prefix (regexp-opt (mapcar 'string characters)))
+                (- (point) n)))))
+        (let ((oq common-lisp-octothorpe-quotation-characters)
+              (op common-lisp-octothorpe-parenthesis-characters)
+              (opp common-lisp-octothorpe-parameter-parenthesis-characters))
+          (cond ((eq (char-syntax delimiter) ?\()
+                 (and (not (funcall look "#" op 2))
+                      (not (funcall look "#[0-9]*" opp 20))))
+                ((eq (char-syntax delimiter) ?\")
+                 (not (funcall look "#" oq 2)))
+                (else t))))))
+
+(add-hook 'lisp-mode-hook
+          (defun common-lisp-mode-hook-paredit ()
+            (make-local-variable 'paredit-space-for-delimiter-predicates)
+            (add-to-list 'paredit-space-for-delimiter-predicates
+                         'paredit-space-for-delimiter-predicate-common-lisp)))
+
+
+
 
 
 
@@ -237,3 +330,10 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+
+
+;; Start emacs in projects directory
+;; ---------------------------------
+
+(find-file "~/projects/")
